@@ -7,36 +7,44 @@ if (debug) {
     console.log(`Selected entries: ${selectedEntryIndexes.length}`)
 }
 
+function tryParseInt(str) {
+    if (str === null || str === undefined || str === "") {
+        return { success: false, value: null };
+    }
+    const num = parseInt(str, 10);
+    if (isNaN(num)) {
+        error({
+            en: `Non-numeric characters are entered in the preutterance or overlap`,
+            ja: `先行発声またはオーバーラップに数字以外が入力されています`
+        })
+    }
+    return { success: true, value: num };
+}
+let resultPre = tryParseInt(preutterance);
+let resultOvl = tryParseInt(overlap);
+
 for (let index of selectedEntryIndexes) {
     let entry = entries[index]
     let edited = Object.assign({}, entry)
     let offset = entry.points[3]
     let preutter = entry.points[1] - offset
 
-    function tryParseInt(str) {
-        const num = parseInt(str, 10);
-        if (isNaN(num)) {
-            return { success: false, value: null };
-        }
-        return { success: true, value: num };
-    }
-
-    let result = tryParseInt(preutterance);
-    if (result.success) {
+    if (resultPre.success) {
         let diff = 0;
         if (preutterance.startsWith("+") || preutterance.startsWith("-")) {
-            diff = result.value;
+            diff = resultPre.value;
         } else {
-            diff = result.value - preutter;
+            diff = resultPre.value - preutter;
         }
-        console.log(`diff: ${diff}`)
+        if (debug) {
+            console.log(`diff: ${diff}`)
+        }
         edited.points[3] = Math.max(entry.points[3] - diff, 0);
     }
 
-    result = tryParseInt(overlap);
-    if (result.success && result.value > 0) {
+    if (resultOvl.success && resultOvl.value > 0) {
         preutter = entry.points[1] - edited.points[3];
-        edited.points[2] = edited.points[3] + (preutter / result.value);
+        edited.points[2] = edited.points[3] + (preutter / resultOvl.value);
     }
 
     edited.start = Math.min(...edited.points, edited.start)
